@@ -1,0 +1,164 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+<h3>CarSales</h3>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div id="list-container"></div>
+        <div id="car-detail-container"></div>
+        <div id="enquiry-container"></div>
+    </div>
+</div>
+
+@section scripts
+{
+<script id='car-list' type='text/ractive'>
+    {{#loading}}
+        <div class="alert alert-info">Loading</div>
+    {{/loading}}
+    <div class="list {{^visible}}hidden{{/visible}}">
+        {{#cars}}
+        <div data-id="{{CarID}}" class="list-item" on-click="show-car">
+            {{Make}} {{Model}} ({{Year}})
+        </div>
+        {{/cars}}
+    </div>
+</script>
+<script id='car-detail' type='text/ractive'>
+    {{#visible}}
+        <button class="btn btn-back" on-click="back">Back</button>
+        {{#loading}}
+        <div class="alert alert-info">Loading</div>
+        {{/loading}}
+        <div class="detail">
+            <p><strong>Make:</strong> {{car.Make}}</p>
+            <p><strong>Model:</strong> {{car.Model}}</p>
+            <p><strong>Year:</strong> {{car.Year}}</p>
+            <p><strong>Email:</strong> {{car.Email}}</p>
+
+            {{#car.ShowPrice}}
+                <p><strong>Price:</strong> {{car.Price}}</p>
+            {{/car.ShowPrice}}
+            {{^car.ShowPrice}}
+            <p><strong>Price:</strong> Please contact us</p>
+            {{/car.ShowPrice}}
+
+            {{#car.IsPrivate}}
+                <p><strong>Contact name:</strong> {{car.ContactName}}</p>
+            {{/car.IsPrivate}}
+            {{^car.IsPrivate}}
+                <p><strong>Phone:</strong> {{car.Phone}}</p>
+                <p><strong>ABN:</strong> {{car.DealerABN}}</p>
+            {{/car.IsPrivate}}
+            <p><strong>Comments:</strong> {{car.Comments}}</p>
+
+            <button class="btn btn-primary btn-send" on-click="send-enquiry">Send enquiry</button>
+        </div>
+    {{/visible}}
+</script>
+<script id='enquiry' type='text/ractive'>
+    {{#visible}}
+        <button class="btn btn-back" on-click="back">Back</button>
+        <div class="enquiry">
+            <div>
+                <label>Recipient:</label>
+                <input disabled />
+            </div>
+            <div>
+                <label>Your name:</label>
+                <input />
+            </div> 
+            <div>
+                <label>Your email:</label>
+                <input />
+            </div>
+            <button class="btn btn btn-primary btn-send" on-click="send">Send</button>
+        </div>
+    {{/visible}}
+</script>
+
+<script>
+    // initialize components
+    enquiry = new Ractive({
+        el: '#enquiry-container',
+        template: '#enquiry',
+        data: { "visible": false }
+    });
+    detail = new Ractive({
+        el: '#car-detail-container',
+        template: '#car-detail',
+        data: { "visible": false }
+    });
+    list = new Ractive({
+        el: '#list-container',
+        template: '#car-list',
+        data: { "visible": true }
+    });
+
+    // register listeners
+    enquiry.on({
+        'back': function (event) {
+            detail.set('visible', true);
+            enquiry.set('visible', false);
+        },
+        'send': function (event) {
+        }
+    });
+    detail.on({
+        'back': function (event) {
+            list.set('visible', true);
+            detail.set('visible', false);
+        },
+        'send-enquiry': function (event) {
+            enquiry.set('visible', true);
+            detail.set('visible', false);
+        }
+    });
+    list.on('show-car', function (event) {
+        var id = event.node.getAttribute("data-id");
+        list.set({ "visible": false });
+        detail.set({ "visible": true, "loading": true });
+
+        // load data for the selected car
+        httpGetAsync('/API/Car/' + id, function (data) {
+            parsedData = JSON.parse(data)
+            if (parsedData.PriceType === 0) {
+                parsedData.ShowPrice = false;
+            } else {
+                parsedData.ShowPrice = true;
+                if (parsedData.PriceType === 1) {
+                    parsedData.Price = parsedData.DapPrice + " (Drive Away)";
+                } else {
+                    parsedData.Price = parsedData.EgcPrice + " (Excluding Government Charges)";
+                }
+            }
+            detail.set({
+                "car": parsedData,
+                "loading": false
+            });
+        });
+    });
+
+    // load data for the list
+    list.set('loading', true);
+    httpGetAsync('/API/Cars', function (data) {
+        parsedData = JSON.parse(data)
+        list.set({
+            "cars": parsedData,
+            "loading": false
+        });
+    });
+
+    // wrapper function to make simple a ajax call
+    function httpGetAsync(theUrl, callback) {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function () {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                callback(xmlHttp.responseText);
+        }
+        xmlHttp.open("GET", theUrl, true);
+        xmlHttp.send(null);
+    }
+</script>
+}
