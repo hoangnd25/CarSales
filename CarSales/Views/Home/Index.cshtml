@@ -59,19 +59,34 @@
 </script>
 <script id='enquiry' type='text/ractive'>
     {{#visible}}
+        {{#alert.visible}}
+            <div class="alert alert-{{alert.type}}">
+                {{alert.message}}
+            </div>
+        {{/alert.visible}}
         <button class="btn btn-back" on-click="back">Back</button>
         <div class="enquiry">
-            <div>
-                <label>Recipient:</label>
-                <input disabled />
+            <div class="form-group">
+                <label class="control-label">Recipient:</label>
+                <input class="form-control" disabled="disabled" value="{{enquiry.Recipient}}" />
             </div>
-            <div>
-                <label>Your name:</label>
-                <input />
+            <div class="form-group {{#errors.Name}}has-error{{/errors.Name}}">
+                <label class="control-label">Your name:</label>
+                <input class="form-control" value="{{enquiry.Name}}" />
+                {{#errors.Name}}
+                <div class="help-block">
+                    {{errors.Name}}
+                </div>
+                {{/errors.Name}}
             </div> 
-            <div>
-                <label>Your email:</label>
-                <input />
+            <div class="form-group {{#errors.Email}}has-error{{/errors.Email}}">
+                <label class="control-label">Your email:</label>
+                <input class="form-control" value="{{enquiry.Email}}"/>
+                {{#errors.Email}}
+                <div class="help-block">
+                    {{errors.Email}}
+                </div>
+                {{/errors.Email}}
             </div>
             <button class="btn btn btn-primary btn-send" on-click="send">Send</button>
         </div>
@@ -103,6 +118,38 @@
             enquiry.set('visible', false);
         },
         'send': function (event) {
+            var data = enquiry.get('enquiry');
+            enquiry.set('alert', {
+                'visible': true,
+                'type': 'info',
+                'message': 'Sending enquiry'
+            });
+            jQuery.post("/API/Enquiry", data, function (response) {
+                if (!response.Success) {
+                    var errors = [];
+                    for (var i = 0; i < response.Errors.length; i++) {
+                        errors[response.Errors[i].Source] = response.Errors[i].Message;
+                    }
+                    enquiry.set({
+                        'alert': {
+                            'visible': true,
+                            'type': 'danger',
+                            'message': response.Message
+                        },
+                        'errors': errors
+                    });
+                } else {
+                    enquiry.set({
+                        'alert': {
+                            'visible': true,
+                            'type': 'success',
+                            'message': response.Message
+                        },
+                        'errors': null
+                    });
+                }
+
+            });
         }
     });
     detail.on({
@@ -111,7 +158,12 @@
             detail.set('visible', false);
         },
         'send-enquiry': function (event) {
-            enquiry.set('visible', true);
+            enquiry.set({
+                'visible': true,
+                'enquiry': {
+                    'Recipient': detail.get('car.Email')
+                }
+            });
             detail.set('visible', false);
         }
     });
@@ -121,20 +173,19 @@
         detail.set({ "visible": true, "loading": true });
 
         // load data for the selected car
-        httpGetAsync('/API/Car/' + id, function (data) {
-            parsedData = JSON.parse(data)
-            if (parsedData.PriceType === 0) {
-                parsedData.ShowPrice = false;
+        jQuery.get('/API/Car/' + id, null, function (data) {
+            if (data.PriceType === 0) {
+                data.ShowPrice = false;
             } else {
-                parsedData.ShowPrice = true;
-                if (parsedData.PriceType === 1) {
-                    parsedData.Price = parsedData.DapPrice + " (Drive Away)";
+                data.ShowPrice = true;
+                if (data.PriceType === 1) {
+                    data.Price = data.DapPrice + " (Drive Away)";
                 } else {
-                    parsedData.Price = parsedData.EgcPrice + " (Excluding Government Charges)";
+                    data.Price = data.EgcPrice + " (Excluding Government Charges)";
                 }
             }
             detail.set({
-                "car": parsedData,
+                "car": data,
                 "loading": false
             });
         });
@@ -142,23 +193,11 @@
 
     // load data for the list
     list.set('loading', true);
-    httpGetAsync('/API/Cars', function (data) {
-        parsedData = JSON.parse(data)
+    jQuery.get('/API/Cars', null, function (data) {
         list.set({
-            "cars": parsedData,
+            "cars": data,
             "loading": false
         });
     });
-
-    // wrapper function to make simple a ajax call
-    function httpGetAsync(theUrl, callback) {
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.onreadystatechange = function () {
-            if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-                callback(xmlHttp.responseText);
-        }
-        xmlHttp.open("GET", theUrl, true);
-        xmlHttp.send(null);
-    }
 </script>
 }

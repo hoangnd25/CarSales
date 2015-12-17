@@ -41,20 +41,26 @@ namespace CarSales.Controllers
 			var response = new APIResponse ();
 			if (string.IsNullOrEmpty (model.Email)) {
 				response.Errors.Add (new APIResponse.Error (){
-					Source = "email",
+					Source = "Email",
 					Message = "Email cannot be empty"
 				});
 			}
 
-			if (string.IsNullOrEmpty (model.Name)) {
+            if (string.IsNullOrEmpty (model.Name)) {
 				response.Errors.Add (new APIResponse.Error (){
-					Source = "name",
+					Source = "Name",
 					Message = "Name cannot be empty"
 				});
 			}
 
-			if (response.Errors.Count > 0)
-				response.Success = false;
+            if (response.Errors.Count > 0)
+            {
+                response.Success = false;
+            }
+            else {
+                db.Enquiries.Add(model);
+                db.SaveChanges();
+            }
 
 			response.Message = response.Success ? "Your enquiry is sent successfully" : "Please check the form";
 
