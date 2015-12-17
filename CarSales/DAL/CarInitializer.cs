@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace CarSales.DAL
 {
-    public class CarInitializer : System.Data.Entity.DropCreateDatabaseIfModelChanges<CarContext>
+    public class CarInitializer : System.Data.Entity.DropCreateDatabaseAlways<CarContext>
     {
         protected override void Seed(CarContext context)
         {

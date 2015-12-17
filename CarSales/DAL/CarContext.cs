@@ -8,6 +8,7 @@ namespace CarSales.DAL
     {
         public CarContext() : base("CarContext")
         {
+            Database.SetInitializer<CarContext>(new CarInitializer());
         }
 
         public DbSet<Car> Cars { get; set; }
