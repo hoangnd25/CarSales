@@ -1,23 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
-using System.Web.Mvc.Ajax;
+﻿using System.Web.Mvc;
 using CarSales.Models;
-using CarSales.DAL;
 using System.Net;
+using CarSales.Repositories;
+using System.Collections.Generic;
 
 namespace CarSales.Controllers
 {
 	public class APIController : Controller
 	{
-        private CarContext db = new CarContext();
+        private ICarRepository CarRepository;
+        private IEnquiryRepository EnquiryRepository;
+
+        public APIController(ICarRepository carRepo, IEnquiryRepository enquiryRepo) {
+            CarRepository = carRepo;
+            EnquiryRepository = enquiryRepo;
+        }
 
         [HttpGet]
 		public ActionResult Cars()
 		{
-            return Json(db.Cars.ToList(), JsonRequestBehavior.AllowGet);
+            return Json(CarRepository.GetAll(), JsonRequestBehavior.AllowGet);
 		}
 
 		[HttpGet]
@@ -27,7 +29,7 @@ namespace CarSales.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Car car = db.Cars.Find(id);
+            Car car = CarRepository.GetById(id.Value);
             if (car == null)
             {
                 return HttpNotFound();
@@ -58,8 +60,7 @@ namespace CarSales.Controllers
                 response.Success = false;
             }
             else {
-                db.Enquiries.Add(model);
-                db.SaveChanges();
+                EnquiryRepository.Send(model);
             }
 
 			response.Message = response.Success ? "Your enquiry is sent successfully" : "Please check the form";
